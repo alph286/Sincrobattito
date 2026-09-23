@@ -13,6 +13,7 @@ let myName = null;
 let phase = 'waiting';
 let cueOpen = false;
 let hasTappedThisCue = false;
+let currentCueType = 'tap';
 
 function vibrate(pattern) {
   if (navigator.vibrate) {
@@ -48,12 +49,15 @@ socket.on('state', (state) => {
     core.className = 'pulse-core';
     statusLine.textContent = '';
   } else if (state.phase === 'running') {
-    waitingLine.textContent = `Sincronia ${state.progress}/${state.target}`;
+    waitingLine.textContent = `Battiti ${state.progress}/${state.target}`;
     if (!cueOpen) {
       core.textContent = '';
       core.className = 'pulse-core';
     }
-    statusLine.textContent = 'Senti il battito... preparati.';
+    const connectedCount = state.players.filter((p) => p.connected).length;
+    statusLine.textContent = connectedCount < 2
+      ? 'In pausa: aspettiamo che si ricolleghi qualcuno.'
+      : 'Senti il battito... preparati.';
   } else if (state.phase === 'success') {
     waitingLine.textContent = '';
     core.textContent = '✓';
@@ -69,30 +73,44 @@ socket.on('beat', () => {
   setTimeout(() => core.classList.remove('beat'), 150);
 });
 
-socket.on('cue', () => {
+socket.on('cue', ({ type }) => {
   cueOpen = true;
   hasTappedThisCue = false;
-  core.textContent = 'PREMI!';
-  core.className = 'pulse-core cue';
-  statusLine.textContent = 'ORA! Premi insieme agli altri.';
-  vibrate([0, 60, 40, 60]);
+  currentCueType = type || 'tap';
+  if (currentCueType === 'skip') {
+    core.textContent = 'FERMO!';
+    core.className = 'pulse-core skip';
+    statusLine.textContent = 'Finta: non toccare!';
+    vibrate(15);
+  } else {
+    core.textContent = 'PREMI!';
+    core.className = 'pulse-core cue';
+    statusLine.textContent = 'ORA! Premi insieme agli altri.';
+    vibrate([0, 60, 40, 60]);
+  }
 });
 
-socket.on('cueResult', ({ success, progress, target }) => {
+socket.on('cueResult', ({ type, success, progress, target }) => {
   cueOpen = false;
   renderDots(progress, target);
   core.className = 'pulse-core ' + (success ? 'ok' : 'bad');
   core.textContent = success ? '✓' : (hasTappedThisCue ? '✓' : '✗');
-  statusLine.textContent = success
-    ? 'Sincronizzati! Continuate così.'
-    : (hasTappedThisCue ? 'Qualcun altro non era pronto. Si ricomincia.' : 'Non hai premuto in tempo!');
+  if (type === 'skip') {
+    statusLine.textContent = success
+      ? 'Bene, ti sei trattenuto!'
+      : (hasTappedThisCue ? 'Era una finta, non dovevi toccare!' : 'Qualcun altro ha ceduto alla finta. Si ricomincia.');
+  } else {
+    statusLine.textContent = success
+      ? 'Sincronizzati! Continuate così.'
+      : (hasTappedThisCue ? 'Qualcun altro non era pronto. Si ricomincia.' : 'Non hai premuto in tempo!');
+  }
   vibrate(success ? [0, 40, 30, 40, 30, 80] : [0, 200]);
   setTimeout(() => {
     if (phase === 'running') {
       core.textContent = '';
       core.className = 'pulse-core';
     }
-  }, 900);
+  }, 700);
 });
 
 socket.on('valveOpen', () => {

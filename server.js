@@ -42,11 +42,10 @@ app.get('/api/join-info', async (req, res) => {
 
 // ---------- Game state ----------
 const DEFAULTS = {
-  bpm: 54,
-  windowMs: 1500,     // durata della finestra di pressione
-  minInterval: 3000,  // intervallo minimo tra un impulso e l'altro
-  maxInterval: 7000,  // intervallo massimo
-  target: 3,           // impulsi sincronizzati consecutivi necessari
+  bpm: 66,
+  windowMs: 600,      // tolleranza di reazione attorno a ogni battito (viene comunque limitata all'85% dell'intervallo tra battiti)
+  target: 8,            // battiti "premi" consecutivi corretti necessari
+  skipChance: 0.2,      // probabilità che un dato battito sia una "finta" (non premere)
 };
 
 let state = {
@@ -56,13 +55,12 @@ let state = {
   target: DEFAULTS.target,
   bpm: DEFAULTS.bpm,
   windowMs: DEFAULTS.windowMs,
-  minInterval: DEFAULTS.minInterval,
-  maxInterval: DEFAULTS.maxInterval,
+  skipChance: DEFAULTS.skipChance,
 };
 
-let loopTimer = null;
-let heartbeatTimer = null;
-let activeCue = null; // { id, deadline, taps: Set }
+let beatTimer = null;
+let resolveTimer = null;
+let activeBeat = null; // { id, type: 'tap' | 'skip', required: Set, taps: Set }
 
 function publicState() {
   return {
@@ -71,6 +69,7 @@ function publicState() {
     target: state.target,
     bpm: state.bpm,
     windowMs: state.windowMs,
+    skipChance: state.skipChance,
     players: Object.entries(state.players).map(([id, p]) => ({
       id,
       name: p.name,
@@ -89,86 +88,97 @@ function connectedPlayerIds() {
     .map(([id]) => id);
 }
 
-function startHeartbeat() {
-  stopHeartbeat();
+function beatIntervalMs() {
+  return Math.round(60000 / state.bpm);
+}
+
+// finestra di pressione: legata al battito, sempre una reazione rapida "a tempo"
+function effectiveWindowMs() {
+  const interval = beatIntervalMs();
+  return Math.max(280, Math.min(state.windowMs, Math.round(interval * 0.85)));
+}
+
+function stopBeatLoop() {
+  if (beatTimer) clearTimeout(beatTimer);
+  if (resolveTimer) clearTimeout(resolveTimer);
+  beatTimer = null;
+  resolveTimer = null;
+  activeBeat = null;
+}
+
+function startBeatLoop() {
+  stopBeatLoop();
+  let firstBeats = 2; // i primissimi battiti sono sempre "premi", per prendere il tempo
   const tick = () => {
-    io.emit('beat');
-    heartbeatTimer = setTimeout(tick, Math.round(60000 / state.bpm));
+    if (state.phase !== 'running') return;
+    const required = connectedPlayerIds();
+
+    if (required.length < 2) {
+      // non abbastanza giocatori collegati: battito a vuoto, si riprova al prossimo
+      io.emit('beat');
+      beatTimer = setTimeout(tick, beatIntervalMs());
+      return;
+    }
+
+    const isSkip = firstBeats <= 0 && Math.random() < state.skipChance;
+    if (firstBeats > 0) firstBeats -= 1;
+
+    const id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    const windowMs = effectiveWindowMs();
+    activeBeat = { id, type: isSkip ? 'skip' : 'tap', required: new Set(required), taps: new Set() };
+    io.emit('cue', { id, type: activeBeat.type, windowMs });
+    resolveTimer = setTimeout(() => resolveBeat(id), windowMs);
+
+    beatTimer = setTimeout(tick, beatIntervalMs());
   };
   tick();
 }
 
-function stopHeartbeat() {
-  if (heartbeatTimer) clearTimeout(heartbeatTimer);
-  heartbeatTimer = null;
-}
+function resolveBeat(id) {
+  if (!activeBeat || activeBeat.id !== id) return;
+  const beat = activeBeat;
+  activeBeat = null;
 
-function scheduleNextCue() {
-  clearTimeout(loopTimer);
-  if (state.phase !== 'running') return;
-  const delay = state.minInterval + Math.random() * (state.maxInterval - state.minInterval);
-  loopTimer = setTimeout(openCue, delay);
-}
-
-function openCue() {
-  if (state.phase !== 'running') return;
-  const required = connectedPlayerIds();
-  if (required.length < 2) {
-    // non abbastanza giocatori collegati: riprova più tardi
-    scheduleNextCue();
-    return;
-  }
-  const id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
-  activeCue = { id, required: new Set(required), taps: new Set() };
-  io.emit('cue', { id, windowMs: state.windowMs });
-  setTimeout(() => resolveCue(id), state.windowMs);
-}
-
-function resolveCue(id) {
-  if (!activeCue || activeCue.id !== id) return;
-  const cue = activeCue;
-  activeCue = null;
-
-  const allTapped = [...cue.required].every((pid) => cue.taps.has(pid));
-  const success = allTapped && cue.required.size >= 2;
-
-  if (success) {
-    state.progress += 1;
+  let success;
+  let missing = [];
+  if (beat.type === 'tap') {
+    missing = [...beat.required].filter((pid) => !beat.taps.has(pid));
+    success = missing.length === 0;
+    state.progress = success ? state.progress + 1 : 0;
   } else {
-    state.progress = 0;
+    // battito "finta": nessuno doveva premere
+    missing = [...beat.taps];
+    success = beat.taps.size === 0;
+    if (!success) state.progress = 0;
   }
-
-  const missing = [...cue.required].filter((pid) => !cue.taps.has(pid));
 
   io.emit('cueResult', {
     id,
+    type: beat.type,
     success,
     progress: state.progress,
     target: state.target,
     missing: missing.map((pid) => state.players[pid]?.name || '???'),
   });
 
-  if (state.progress >= state.target) {
+  if (beat.type === 'tap' && state.progress >= state.target) {
     state.phase = 'success';
-    stopHeartbeat();
+    stopBeatLoop();
     io.emit('valveOpen');
     broadcastState();
     return;
   }
 
   broadcastState();
-  scheduleNextCue();
 }
 
 function resetGame(hard) {
-  clearTimeout(loopTimer);
-  activeCue = null;
+  stopBeatLoop();
   state.progress = 0;
   state.phase = 'waiting';
   if (hard) {
     state.players = {};
   }
-  stopHeartbeat();
   broadcastState();
 }
 
@@ -188,23 +198,25 @@ io.on('connection', (socket) => {
   });
 
   socket.on('player:tap', () => {
-    if (!activeCue) return;
+    if (!activeBeat) return;
     if (!state.players[socket.id]) return;
-    activeCue.taps.add(socket.id);
-    io.to('hosts').emit('tapPing', { id: socket.id, name: state.players[socket.id].name });
+    activeBeat.taps.add(socket.id);
+    io.to('hosts').emit('tapPing', { id: socket.id, name: state.players[socket.id].name, type: activeBeat.type });
   });
 
   socket.on('host:start', (opts) => {
     if (opts && typeof opts === 'object') {
       if (opts.bpm) state.bpm = Math.min(120, Math.max(30, Number(opts.bpm) || state.bpm));
-      if (opts.target) state.target = Math.min(10, Math.max(1, Number(opts.target) || state.target));
-      if (opts.windowMs) state.windowMs = Math.min(4000, Math.max(600, Number(opts.windowMs) || state.windowMs));
+      if (opts.target) state.target = Math.min(20, Math.max(1, Number(opts.target) || state.target));
+      if (opts.windowMs) state.windowMs = Math.min(2000, Math.max(300, Number(opts.windowMs) || state.windowMs));
+      if (opts.skipChance !== undefined) {
+        state.skipChance = Math.min(0.6, Math.max(0, Number(opts.skipChance) / 100 || 0));
+      }
     }
     state.phase = 'running';
     state.progress = 0;
     broadcastState();
-    startHeartbeat();
-    scheduleNextCue();
+    startBeatLoop();
   });
 
   socket.on('host:reset', () => resetGame(false));

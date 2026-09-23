@@ -12,6 +12,7 @@ const hardResetBtn = document.getElementById('hardResetBtn');
 const bpmInput = document.getElementById('bpm');
 const targetInput = document.getElementById('target');
 const windowInput = document.getElementById('windowMs');
+const skipChanceInput = document.getElementById('skipChance');
 
 let lastState = null;
 let tappedThisCue = new Set();
@@ -58,7 +59,12 @@ socket.on('state', (state) => {
     statusLine.textContent = 'Fai entrare i giocatori, poi premi Avvia.';
     startBtn.disabled = false;
   } else if (state.phase === 'running') {
-    statusLine.textContent = `Sincronia ${state.progress}/${state.target} — attenti al battito...`;
+    const connectedCount = state.players.filter((p) => p.connected).length;
+    if (connectedCount < 2) {
+      statusLine.textContent = 'In pausa: servono almeno 2 giocatori collegati per generare un impulso.';
+    } else {
+      statusLine.textContent = `Battiti ${state.progress}/${state.target} — premete a tempo, fermi sulle finte!`;
+    }
     startBtn.disabled = true;
   } else if (state.phase === 'success') {
     core.textContent = 'APERTA';
@@ -74,11 +80,17 @@ socket.on('beat', () => {
   setTimeout(() => core.classList.remove('beat'), 150);
 });
 
-socket.on('cue', ({ windowMs }) => {
+socket.on('cue', ({ type }) => {
   tappedThisCue = new Set();
-  core.textContent = 'ORA!';
-  core.className = 'pulse-core cue';
-  statusLine.textContent = 'Impulso di pressione! Chi tocca in tempo?';
+  if (type === 'skip') {
+    core.textContent = 'FERMI!';
+    core.className = 'pulse-core skip';
+    statusLine.textContent = 'Finta: nessuno deve toccare!';
+  } else {
+    core.textContent = 'ORA!';
+    core.className = 'pulse-core cue';
+    statusLine.textContent = 'Premete insieme!';
+  }
   if (lastState) renderPlayers(lastState.players);
 });
 
@@ -87,11 +99,19 @@ socket.on('tapPing', ({ id }) => {
   if (lastState) renderPlayers(lastState.players);
 });
 
-socket.on('cueResult', ({ success, missing, progress, target }) => {
+socket.on('cueResult', ({ type, success, missing, progress, target }) => {
   core.className = 'pulse-core ' + (success ? 'ok' : 'bad');
-  core.textContent = success ? 'SINCRONO!' : 'FUORI TEMPO';
+  if (type === 'skip') {
+    core.textContent = success ? 'BRAVI!' : 'TOCCATO!';
+  } else {
+    core.textContent = success ? 'SINCRONO!' : 'FUORI TEMPO';
+  }
   renderDots(progress, target);
-  if (success) {
+  if (type === 'skip') {
+    statusLine.textContent = success
+      ? 'Bene, nessuno ha ceduto alla finta.'
+      : `${missing.join(', ')} ha toccato durante la finta! Si ricomincia.`;
+  } else if (success) {
     statusLine.textContent = `Ottimo lavoro! ${progress}/${target} completati.`;
   } else if (missing && missing.length) {
     statusLine.textContent = `Fuori tempo: ${missing.join(', ')} non ha premuto in sincronia. Si ricomincia.`;
@@ -100,10 +120,10 @@ socket.on('cueResult', ({ success, missing, progress, target }) => {
   }
   setTimeout(() => {
     if (lastState && lastState.phase === 'running') {
-      core.textContent = 'ATTESA...';
+      core.textContent = '';
       core.className = 'pulse-core';
     }
-  }, 900);
+  }, 700);
 });
 
 socket.on('valveOpen', () => {
@@ -113,9 +133,10 @@ socket.on('valveOpen', () => {
 
 startBtn.addEventListener('click', () => {
   socket.emit('host:start', {
-    bpm: Number(bpmInput.value) || 54,
-    target: Number(targetInput.value) || 3,
-    windowMs: Number(windowInput.value) || 1500,
+    bpm: Number(bpmInput.value) || 66,
+    target: Number(targetInput.value) || 8,
+    windowMs: Number(windowInput.value) || 600,
+    skipChance: Number(skipChanceInput.value) || 0,
   });
 });
 

@@ -21,6 +21,7 @@ html, body {
   color: var(--text);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 a { color: inherit; }
@@ -33,6 +34,43 @@ a { color: inherit; }
   justify-content: center;
   padding: 16px;
   text-align: center;
+}
+
+/* ---------- host: compact two-column layout so everything fits one screen ---------- */
+.host-screen {
+  min-height: 100vh;
+  padding: 14px 20px;
+  justify-content: flex-start;
+}
+
+.host-grid {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px 32px;
+  align-items: start;
+}
+
+@media (min-width: 860px) and (min-height: 560px) {
+  .host-grid {
+    grid-template-columns: 260px 1fr;
+  }
+  .host-col-info { text-align: left; }
+  .host-col-info .qr-box { margin: 0; }
+  .host-col-info .player-list { justify-content: flex-start; }
+}
+
+.host-col-info h1 { font-size: 1.2rem; margin-bottom: 2px; }
+.host-col-info .subtitle { font-size: 0.75rem; margin-bottom: 12px; }
+.host-col-info .qr-box img { width: 140px; height: 140px; }
+.host-col-info .join-url { font-size: 0.8rem; }
+
+.host-col-game .pulse-wrap {
+  width: min(38vw, 220px);
+  height: min(38vw, 220px);
+  margin: 4px auto;
 }
 
 h1 {
@@ -126,6 +164,13 @@ input[type="text"], input[type="number"] {
   color: #1a0507;
   box-shadow: inset 0 0 40px rgba(255,255,255,0.25), 0 0 60px rgba(255,77,85,0.7);
   transform: scale(1.12);
+}
+
+.pulse-core.skip {
+  background: radial-gradient(circle at 35% 30%, #f4e3ff, #7b4fb0 55%, #2a0d42 100%);
+  color: #1c0a2e;
+  box-shadow: inset 0 0 40px rgba(255,255,255,0.2), 0 0 60px rgba(123,79,176,0.7);
+  transform: scale(1.04);
 }
 
 .pulse-core.ok {
