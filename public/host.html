@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sincrobattito — Regia</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<div class="veins"></div>
+<div class="screen">
+  <h1>La Valvola Pulsante</h1>
+  <p class="subtitle">Schermo di regia — mostralo ai giocatori o guardalo tu come DM</p>
+
+  <div id="joinBox">
+    <div class="qr-box"><img id="qrImg" alt="QR code" /></div>
+    <div class="join-url" id="joinUrl">caricamento...</div>
+  </div>
+
+  <ul class="player-list" id="playerList"></ul>
+
+  <div class="progress-dots" id="dots"></div>
+
+  <div class="pulse-wrap">
+    <div class="pulse-ring"></div>
+    <div class="pulse-core" id="core">IN ATTESA</div>
+  </div>
+
+  <div class="status-line" id="statusLine">Fai entrare i giocatori, poi premi Avvia.</div>
+
+  <div class="controls-row" id="setupControls">
+    <div class="field">BPM
+      <input type="number" id="bpm" value="54" min="30" max="120" />
+    </div>
+    <div class="field">Sincronie richieste
+      <input type="number" id="target" value="3" min="1" max="10" />
+    </div>
+    <div class="field">Finestra (ms)
+      <input type="number" id="windowMs" value="1500" min="600" max="4000" step="100" />
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <button id="startBtn">Avvia la valvola</button>
+    <button id="resetBtn" class="secondary">Reset tentativo</button>
+    <button id="hardResetBtn" class="ghost">Reset totale (rimuove giocatori)</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/host.js"></script>
+</body>
+</html>

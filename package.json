@@ -1,0 +1,15 @@
+{
+  "name": "sincrobattito",
+  "version": "1.0.0",
+  "description": "Mini app locale per la scena della valvola sincronizzata - i giocatori premono sul cellulare a ritmo per aprire la valvola",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.7.5"
+  }
+}
