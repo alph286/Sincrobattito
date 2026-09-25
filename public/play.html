@@ -10,24 +10,19 @@
 <div class="veins"></div>
 
 <div class="screen" id="joinScreen">
-  <h1>La Valvola Pulsante</h1>
-  <p class="subtitle">Appoggia il pollice sul punto di pressione e senti il battito.</p>
   <form class="name-form" id="joinForm">
-    <input type="text" id="nameInput" placeholder="Il tuo nome" maxlength="24" autocomplete="off" required />
-    <button type="submit">Entra nella stanza</button>
+    <input type="text" id="nameInput" placeholder="Inserisci il tuo nome" maxlength="24" autocomplete="off" required />
+    <button type="submit">Accedi</button>
   </form>
 </div>
 
 <div class="screen" id="gameScreen" style="display:none;">
-  <p class="subtitle" id="waitingLine">Aspetta che il DM avvii la valvola...</p>
-
   <div class="pulse-wrap">
     <div class="pulse-ring"></div>
-    <div class="pulse-core" id="core">•</div>
+    <div class="pulse-core" id="core"></div>
   </div>
 
   <div class="progress-dots" id="dots"></div>
-  <div class="status-line" id="statusLine"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>

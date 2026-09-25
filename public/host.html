@@ -10,18 +10,6 @@
 <div class="veins"></div>
 <div class="screen host-screen">
   <div class="host-grid">
-    <div class="host-col-info">
-      <h1>La Valvola Pulsante</h1>
-      <p class="subtitle">Schermo di regia — mostralo ai giocatori o guardalo tu come DM</p>
-
-      <div id="joinBox">
-        <div class="qr-box"><img id="qrImg" alt="QR code" /></div>
-        <div class="join-url" id="joinUrl">caricamento...</div>
-      </div>
-
-      <ul class="player-list" id="playerList"></ul>
-    </div>
-
     <div class="host-col-game">
       <div class="progress-dots" id="dots"></div>
 
@@ -34,16 +22,16 @@
 
       <div class="controls-row" id="setupControls">
         <div class="field">BPM
-          <input type="number" id="bpm" value="66" min="30" max="120" />
+          <input type="number" inputmode="numeric" pattern="[0-9]*" id="bpm" value="66" min="30" max="120" />
         </div>
         <div class="field">Battiti richiesti
-          <input type="number" id="target" value="8" min="1" max="20" />
+          <input type="number" inputmode="numeric" pattern="[0-9]*" id="target" value="8" min="1" max="20" />
         </div>
         <div class="field">Tolleranza (ms)
-          <input type="number" id="windowMs" value="600" min="300" max="2000" step="50" />
+          <input type="number" inputmode="numeric" pattern="[0-9]*" id="windowMs" value="600" min="300" max="2000" step="50" />
         </div>
         <div class="field">Finte (%)
-          <input type="number" id="skipChance" value="20" min="0" max="60" step="5" />
+          <input type="number" inputmode="numeric" pattern="[0-9]*" id="skipChance" value="20" min="0" max="60" step="5" />
         </div>
       </div>
 

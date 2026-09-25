@@ -5,7 +5,7 @@ const path = require('path');
 const QRCode = require('qrcode');
 const { Server } = require('socket.io');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 const app = express();
 const server = http.createServer(app);

@@ -2,10 +2,7 @@ const socket = io();
 
 const core = document.getElementById('core');
 const statusLine = document.getElementById('statusLine');
-const playerList = document.getElementById('playerList');
 const dots = document.getElementById('dots');
-const qrImg = document.getElementById('qrImg');
-const joinUrl = document.getElementById('joinUrl');
 const startBtn = document.getElementById('startBtn');
 const resetBtn = document.getElementById('resetBtn');
 const hardResetBtn = document.getElementById('hardResetBtn');
@@ -15,17 +12,6 @@ const windowInput = document.getElementById('windowMs');
 const skipChanceInput = document.getElementById('skipChance');
 
 let lastState = null;
-let tappedThisCue = new Set();
-
-fetch('/api/join-info')
-  .then((r) => r.json())
-  .then((info) => {
-    joinUrl.textContent = info.url;
-    if (info.qr) qrImg.src = info.qr;
-  })
-  .catch(() => {
-    joinUrl.textContent = 'Impossibile generare il link. Usa http://<ip-di-questo-pc>:3000/play';
-  });
 
 socket.emit('host:hello');
 
@@ -38,20 +24,9 @@ function renderDots(progress, target) {
   }
 }
 
-function renderPlayers(players) {
-  playerList.innerHTML = '';
-  players.forEach((p) => {
-    const li = document.createElement('li');
-    li.className = (p.connected ? 'connected' : 'disconnected') + (tappedThisCue.has(p.id) ? ' tapped' : '');
-    li.innerHTML = `<span class="dot"></span>${p.name}`;
-    playerList.appendChild(li);
-  });
-}
-
 socket.on('state', (state) => {
   lastState = state;
   renderDots(state.progress, state.target);
-  renderPlayers(state.players);
 
   if (state.phase === 'waiting') {
     core.textContent = 'IN ATTESA';
@@ -81,7 +56,6 @@ socket.on('beat', () => {
 });
 
 socket.on('cue', ({ type }) => {
-  tappedThisCue = new Set();
   if (type === 'skip') {
     core.textContent = 'FERMI!';
     core.className = 'pulse-core skip';
@@ -91,12 +65,6 @@ socket.on('cue', ({ type }) => {
     core.className = 'pulse-core cue';
     statusLine.textContent = 'Premete insieme!';
   }
-  if (lastState) renderPlayers(lastState.players);
-});
-
-socket.on('tapPing', ({ id }) => {
-  tappedThisCue.add(id);
-  if (lastState) renderPlayers(lastState.players);
 });
 
 socket.on('cueResult', ({ type, success, missing, progress, target }) => {

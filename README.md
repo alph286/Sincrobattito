@@ -13,11 +13,10 @@ npm start
 
 Il server stampa in console due indirizzi (usa l'IP locale del PC, es. `192.168.x.x`):
 
-- **Regia (DM)**: `http://<ip>:3000/host` — apri questo sullo schermo/laptop del DM.
-  Mostra un QR code per far entrare i giocatori, la lista dei collegati e i controlli
-  (BPM, numero di sincronie richieste, durata della finestra di pressione).
-- **Giocatori**: `http://<ip>:3000/play` — ogni giocatore lo apre sul proprio
-  cellulare (inquadrando il QR mostrato in regia), inserisce il nome ed entra.
+- **Regia (DM)**: `http://<ip>:3001/host` — apri questo sul tuo cellulare o laptop.
+  Mostra la valvola pulsante e i controlli (BPM, battiti richiesti, tolleranza, finte).
+- **Giocatori**: `http://<ip>:3001/play` — manda questo link ai giocatori (es. via
+  Telegram): ognuno lo apre sul proprio cellulare, inserisce il nome e preme Accedi.
 
 Assicurati che i cellulari dei giocatori siano sulla **stessa rete Wi-Fi** del PC
 che fa da server.
@@ -28,11 +27,11 @@ che fa da server.
    "organico" in attesa.
 2. Il DM preme **Avvia la valvola** in regia: da quel momento la valvola batte
    a un ritmo fisso (i BPM impostati) e **quasi ogni battito** il cerchio di
-   tutti i cellulari lampeggia con la scritta **PREMI!** — bisogna toccarlo
-   subito, in tempo, insieme a tutti gli altri (vibrazione inclusa).
+   tutti i cellulari si accende di rosso (con vibrazione) — bisogna toccarlo
+   subito, in tempo, insieme a tutti gli altri.
 3. Di tanto in tanto (percentuale "Finte" configurabile) un battito è una
-   **finta**: il cerchio diventa viola con la scritta **FERMO!** — quella
-   volta **nessuno** deve toccarlo. Richiede attenzione oltre che riflessi.
+   **finta**: il cerchio diventa viola — quella volta **nessuno** deve
+   toccarlo. Richiede attenzione oltre che riflessi.
 4. Se anche solo un giocatore sbaglia (non tocca in tempo su un battito buono,
    oppure tocca su una finta), non succede nulla di grave: il tentativo si
    resetta e si riparte dal battito successivo, senza penalità.
