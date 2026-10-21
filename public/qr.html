@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Sincrobattito – QR</title>
+<style>
+  :root { --bg:#0b0c10; --text:#f4e9e3; --muted:#8a7d78; --accent:#b3232b; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family: system-ui, sans-serif; }
+  body { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2vmin; text-align:center; padding:4vmin; }
+  h1 { margin:0; font-size:5vmin; letter-spacing:.05em; }
+  .qr { background:#fff; padding:2vmin; border-radius:2vmin; border:.6vmin solid var(--accent); }
+  .qr img { display:block; width:min(70vmin, 80vw); height:auto; image-rendering:pixelated; }
+  .url { color:var(--muted); font-size:3vmin; word-break:break-all; }
+</style>
+</head>
+<body>
+  <h1>Inquadra per giocare</h1>
+  <div class="qr"><img id="qr" alt="QR code della pagina play" /></div>
+  <div class="url" id="url">…</div>
+<script>
+fetch('/api/join-info?w=800').then(r => r.json()).then(({ url, qr }) => {
+  document.getElementById('url').textContent = url;
+  if (qr) document.getElementById('qr').src = qr;
+});
+</script>
+</body>
+</html>

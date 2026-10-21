@@ -16,6 +16,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => res.redirect('/host'));
 app.get('/host', (req, res) => res.sendFile(path.join(__dirname, 'public', 'host.html')));
 app.get('/play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'play.html')));
+app.get('/qr', (req, res) => res.sendFile(path.join(__dirname, 'public', 'qr.html')));
 
 function getLocalIp() {
   const ifaces = os.networkInterfaces();
@@ -33,7 +34,7 @@ app.get('/api/join-info', async (req, res) => {
   const ip = getLocalIp();
   const url = `http://${ip}:${PORT}/play`;
   try {
-    const qr = await QRCode.toDataURL(url, { margin: 1, width: 320 });
+    const qr = await QRCode.toDataURL(url, { margin: 1, width: Math.min(Number(req.query.w) || 320, 1200) });
     res.json({ url, qr });
   } catch (err) {
     res.json({ url, qr: null });
