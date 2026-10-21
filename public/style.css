@@ -22,16 +22,27 @@ html, body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: none;
+  overscroll-behavior-y: contain;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 a { color: inherit; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .screen { animation: screen-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .screen {
   position: relative;
   z-index: 1;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -43,6 +54,7 @@ a { color: inherit; }
 /* ---------- host: compact single-column layout, thumb-reachable controls ---------- */
 .host-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: max(14px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   justify-content: flex-start;
 }
@@ -98,6 +110,12 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 button.secondary { background: #33363f; }
 button.ghost { background: transparent; border: 1px solid var(--muted); color: var(--muted); }
 
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
+}
+
 input[type="text"], input[type="number"] {
   font: inherit;
   font-size: 16px;
@@ -136,6 +154,17 @@ input[type="number"] { -moz-appearance: textfield; }
   border-radius: 50%;
   border: 2px solid var(--flesh-light);
   opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse-ring.idle {
+    animation: ring-breathe 4.2s ease-in-out infinite;
+  }
+}
+
+@keyframes ring-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.04); opacity: 0.7; }
 }
 
 .pulse-core {
@@ -323,4 +352,57 @@ input[type="number"] { -moz-appearance: textfield; }
   flex-direction: column;
   gap: 12px;
   width: min(90vw, 320px);
+}
+
+.brand {
+  margin-bottom: 28px;
+}
+
+.brand h1 {
+  font-size: 1.3rem;
+}
+
+.brand .subtitle {
+  margin-bottom: 0;
+}
+
+/* ---------- connection banner: fixed pill, safe-area aware, non-blocking ---------- */
+.conn-banner {
+  position: fixed;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: var(--bad);
+  color: #2a0508;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: top 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.conn-banner.visible {
+  top: max(10px, env(safe-area-inset-top));
+  opacity: 1;
+}
+
+/* ---------- invite box: QR + link to onboard players' phones ---------- */
+.invite-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 10px auto 18px;
+}
+
+.invite-box .invite-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }

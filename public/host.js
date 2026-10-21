@@ -1,6 +1,7 @@
 const socket = io();
 
 const core = document.getElementById('core');
+const ring = document.getElementById('ring');
 const statusLine = document.getElementById('statusLine');
 const dots = document.getElementById('dots');
 const startBtn = document.getElementById('startBtn');
@@ -10,10 +11,30 @@ const bpmInput = document.getElementById('bpm');
 const targetInput = document.getElementById('target');
 const windowInput = document.getElementById('windowMs');
 const skipChanceInput = document.getElementById('skipChance');
+const inviteBox = document.getElementById('inviteBox');
+const qrImg = document.getElementById('qrImg');
+const joinUrl = document.getElementById('joinUrl');
+const connBanner = document.getElementById('connBanner');
 
 let lastState = null;
 
 socket.emit('host:hello');
+
+socket.on('disconnect', () => connBanner.classList.add('visible'));
+socket.io.on('reconnect_attempt', () => connBanner.classList.add('visible'));
+socket.on('connect', () => {
+  connBanner.classList.remove('visible');
+  socket.emit('host:hello');
+});
+
+fetch('/api/join-info')
+  .then((r) => r.json())
+  .then(({ url, qr }) => {
+    joinUrl.textContent = url;
+    if (qr) qrImg.src = qr;
+    else inviteBox.style.display = 'none';
+  })
+  .catch(() => { inviteBox.style.display = 'none'; });
 
 function renderDots(progress, target) {
   dots.innerHTML = '';
@@ -31,9 +52,16 @@ socket.on('state', (state) => {
   if (state.phase === 'waiting') {
     core.textContent = 'IN ATTESA';
     core.className = 'pulse-core';
-    statusLine.textContent = 'Fai entrare i giocatori, poi premi Avvia.';
+    ring.classList.add('idle');
+    inviteBox.style.display = '';
+    const connectedCount = state.players.filter((p) => p.connected).length;
+    statusLine.textContent = connectedCount > 0
+      ? `${connectedCount} giocator${connectedCount === 1 ? 'e' : 'i'} collegat${connectedCount === 1 ? 'o' : 'i'}. Premi Avvia quando siete pronti.`
+      : 'Fai entrare i giocatori, poi premi Avvia.';
     startBtn.disabled = false;
   } else if (state.phase === 'running') {
+    ring.classList.remove('idle');
+    inviteBox.style.display = 'none';
     const connectedCount = state.players.filter((p) => p.connected).length;
     if (connectedCount < 2) {
       statusLine.textContent = 'In pausa: servono almeno 2 giocatori collegati per generare un impulso.';
@@ -44,6 +72,8 @@ socket.on('state', (state) => {
   } else if (state.phase === 'success') {
     core.textContent = 'APERTA';
     core.className = 'pulse-core ok';
+    ring.classList.remove('idle');
+    inviteBox.style.display = 'none';
     statusLine.innerHTML = '<span class="big-title">La valvola cede!</span>';
     startBtn.disabled = true;
   }
