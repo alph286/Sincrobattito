@@ -262,6 +262,28 @@ input[type="number"] { -moz-appearance: textfield; }
   background: var(--muted);
 }
 .player-list li.connected .dot { background: var(--ok); }
+.player-list li .fake-taps {
+  min-width: 2ch;
+  font-weight: 700;
+  color: #c9a6ff;
+}
+.player-list button.mini {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border-radius: 8px;
+}
+
+/* telefono: il proprio contatore delle finte toccate, piccolo in basso */
+.fake-count {
+  position: absolute;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #c9a6ff;
+}
 .player-list li.tapped { border-color: var(--ok); box-shadow: 0 0 10px rgba(53,196,106,0.4); }
 .player-list li.online.offline .dot { background: var(--bad); }
 .player-list li.disconnected .dot { background: var(--bad); }

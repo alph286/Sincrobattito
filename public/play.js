@@ -8,13 +8,32 @@ const core = document.getElementById('core');
 const dots = document.getElementById('dots');
 const cueLabel = document.getElementById('cueLabel');
 const connBanner = document.getElementById('connBanner');
+const fakeCount = document.getElementById('fakeCount');
 
-let myName = null;
+const TOKEN_KEY = 'sincrobattito-token';
+
+function loadToken() {
+  try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+}
+function saveToken(token) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch (e) { /* ignore */ }
+}
+
+let myId = null;
 let phase = 'waiting';
 let cueOpen = false;
 let hasTappedThisCue = false;
 
-socket.on('connect', () => connBanner.classList.remove('visible'));
+// a ogni connessione (anche dopo una caduta di rete) si rientra col token salvato, se c'è
+socket.on('connect', () => {
+  connBanner.classList.remove('visible');
+  const token = loadToken();
+  if (token) socket.emit('player:resume', token);
+  else showJoin();
+});
 socket.on('disconnect', () => connBanner.classList.add('visible'));
 socket.io.on('reconnect_attempt', () => connBanner.classList.add('visible'));
 
@@ -24,12 +43,29 @@ function vibrate(pattern) {
   }
 }
 
+function showJoin() {
+  myId = null;
+  gameScreen.style.display = 'none';
+  joinScreen.style.display = 'flex';
+}
+
 joinForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  myName = nameInput.value.trim() || 'Avventuriero';
-  socket.emit('player:join', myName);
+  socket.emit('player:join', nameInput.value.trim() || 'Avventuriero');
+});
+
+socket.on('joined', ({ id, token }) => {
+  myId = id;
+  saveToken(token);
   joinScreen.style.display = 'none';
   gameScreen.style.display = 'flex';
+});
+
+socket.on('kicked', () => {
+  saveToken(null);
+  clearCue();
+  nameInput.value = '';
+  showJoin();
 });
 
 function renderDots(progress, target) {
@@ -52,8 +88,10 @@ function clearCue() {
 
 socket.on('state', (state) => {
   phase = state.phase;
-  if (!myName) return;
+  if (!myId) return;
   renderDots(state.progress, state.target);
+  const me = state.players.find((p) => p.id === myId);
+  if (me) fakeCount.textContent = me.fakeTaps;
   if (state.phase !== 'running') clearCue();
 });
 

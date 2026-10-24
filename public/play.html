@@ -16,7 +16,7 @@
 <div class="veins"></div>
 <div class="conn-banner" id="connBanner">Connessione persa — riconnessione…</div>
 
-<div class="screen" id="joinScreen">
+<div class="screen" id="joinScreen" style="display:none;">
   <form class="name-form" id="joinForm">
     <input type="text" id="nameInput" placeholder="Nome" maxlength="24" autocomplete="off" required />
     <button type="submit">Accedi</button>
@@ -31,6 +31,8 @@
     <div class="pulse-ring" id="ring"></div>
     <div class="pulse-core" id="core"></div>
   </div>
+
+  <div class="fake-count" id="fakeCount">0</div>
 </div>
 
 <script src="/bg-shader.js"></script>

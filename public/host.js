@@ -2,11 +2,12 @@ const socket = io();
 
 const core = document.getElementById('core');
 const ring = document.getElementById('ring');
-const statusLine = document.getElementById('statusLine');
+const playerList = document.getElementById('playerList');
 const dots = document.getElementById('dots');
 const startBtn = document.getElementById('startBtn');
 const resetBtn = document.getElementById('resetBtn');
 const hardResetBtn = document.getElementById('hardResetBtn');
+const resetFakesBtn = document.getElementById('resetFakesBtn');
 const bpmInput = document.getElementById('bpm');
 const targetInput = document.getElementById('target');
 const windowInput = document.getElementById('windowMs');
@@ -51,36 +52,43 @@ function renderDots(progress, target) {
   }
 }
 
+function renderPlayers(players) {
+  playerList.innerHTML = '';
+  for (const p of players) {
+    const li = document.createElement('li');
+    li.className = p.connected ? 'connected' : 'disconnected';
+    li.innerHTML = '<span class="dot"></span><span class="name"></span>'
+      + '<span class="fake-taps" title="Finte toccate"></span>'
+      + '<button class="mini secondary" data-act="zero">Azzera</button>'
+      + '<button class="mini ghost" data-act="kick">Espelli</button>';
+    li.querySelector('.name').textContent = p.name;
+    li.querySelector('.fake-taps').textContent = p.fakeTaps;
+    li.querySelector('[data-act="zero"]').addEventListener('click', () => socket.emit('host:resetFakeTaps', p.id));
+    li.querySelector('[data-act="kick"]').addEventListener('click', () => socket.emit('host:kick', p.id));
+    playerList.appendChild(li);
+  }
+}
+
 socket.on('state', (state) => {
   lastState = state;
   renderDots(state.progress, state.target);
+  renderPlayers(state.players);
 
   if (state.phase === 'waiting') {
     core.textContent = 'IN ATTESA';
     core.className = 'pulse-core';
     ring.classList.add('idle');
     inviteBox.style.display = '';
-    const connectedCount = state.players.filter((p) => p.connected).length;
-    statusLine.textContent = connectedCount > 0
-      ? `${connectedCount} giocator${connectedCount === 1 ? 'e' : 'i'} collegat${connectedCount === 1 ? 'o' : 'i'}. Premi Avvia quando siete pronti.`
-      : 'Fai entrare i giocatori, poi premi Avvia.';
     startBtn.disabled = false;
   } else if (state.phase === 'running') {
     ring.classList.remove('idle');
     inviteBox.style.display = 'none';
-    const connectedCount = state.players.filter((p) => p.connected).length;
-    if (connectedCount < 2) {
-      statusLine.textContent = 'In pausa: servono almeno 2 giocatori collegati per generare un impulso.';
-    } else {
-      statusLine.textContent = `Battiti ${state.progress}/${state.target} — premete a tempo, fermi sulle finte!`;
-    }
     startBtn.disabled = true;
   } else if (state.phase === 'success') {
     core.textContent = 'APERTA';
     core.className = 'pulse-core ok';
     ring.classList.remove('idle');
     inviteBox.style.display = 'none';
-    statusLine.innerHTML = '<span class="big-title">La valvola cede!</span>';
     startBtn.disabled = true;
   }
 });
@@ -97,15 +105,13 @@ socket.on('cue', ({ type }) => {
   if (type === 'skip') {
     core.textContent = 'FERMI!';
     core.className = 'pulse-core skip';
-    statusLine.textContent = 'Finta: nessuno deve toccare!';
   } else {
     core.textContent = 'ORA!';
     core.className = 'pulse-core cue';
-    statusLine.textContent = 'Premete insieme!';
   }
 });
 
-socket.on('cueResult', ({ type, success, missing, progress, target }) => {
+socket.on('cueResult', ({ type, success, progress, target }) => {
   core.className = 'pulse-core ' + (success ? 'ok' : 'bad');
   if (type === 'skip') {
     core.textContent = success ? 'BRAVI!' : 'TOCCATO!';
@@ -113,17 +119,6 @@ socket.on('cueResult', ({ type, success, missing, progress, target }) => {
     core.textContent = success ? 'SINCRONO!' : 'FUORI TEMPO';
   }
   renderDots(progress, target);
-  if (type === 'skip') {
-    statusLine.textContent = success
-      ? 'Bene, nessuno ha ceduto alla finta.'
-      : `${missing.join(', ')} ha toccato durante la finta! Si ricomincia.`;
-  } else if (success) {
-    statusLine.textContent = `Ottimo lavoro! ${progress}/${target} completati.`;
-  } else if (missing && missing.length) {
-    statusLine.textContent = `Fuori tempo: ${missing.join(', ')} non ha premuto in sincronia. Si ricomincia.`;
-  } else {
-    statusLine.textContent = 'Fuori tempo. Si ricomincia.';
-  }
 });
 
 socket.on('valveOpen', () => {
@@ -191,6 +186,10 @@ startBtn.addEventListener('click', () => {
 
 resetBtn.addEventListener('click', () => {
   socket.emit('host:reset');
+});
+
+resetFakesBtn.addEventListener('click', () => {
+  socket.emit('host:resetFakeTaps');
 });
 
 hardResetBtn.addEventListener('click', () => {

@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const crypto = require('crypto');
 const http = require('http');
 const os = require('os');
 const path = require('path');
@@ -52,7 +53,7 @@ const DEFAULTS = {
 
 let state = {
   phase: 'waiting',    // waiting | running | success
-  players: {},          // id -> { name, connected, lastTapAt }
+  players: {},          // id pubblico -> { name, token, sockets, fakeTaps }
   progress: 0,
   target: DEFAULTS.target,
   bpm: DEFAULTS.bpm,
@@ -101,7 +102,8 @@ function publicState() {
     players: Object.entries(state.players).map(([id, p]) => ({
       id,
       name: p.name,
-      connected: p.connected,
+      connected: p.sockets > 0,
+      fakeTaps: p.fakeTaps,
     })),
   };
 }
@@ -112,7 +114,7 @@ function broadcastState() {
 
 function connectedPlayerIds() {
   return Object.entries(state.players)
-    .filter(([, p]) => p.connected)
+    .filter(([, p]) => p.sockets > 0)
     .map(([id]) => id);
 }
 
@@ -177,6 +179,10 @@ function resolveBeat(id) {
     // battito "finta": nessuno doveva premere
     missing = [...beat.taps];
     success = beat.taps.size === 0;
+    // ogni giocatore che ha toccato la finta prende +1 (al massimo uno per finta)
+    for (const pid of beat.taps) {
+      if (state.players[pid]) state.players[pid].fakeTaps += 1;
+    }
     if (!success) state.progress = 0;
   }
 
@@ -205,9 +211,36 @@ function resetGame(hard) {
   state.progress = 0;
   state.phase = 'waiting';
   if (hard) {
-    state.players = {};
+    for (const id of Object.keys(state.players)) kickPlayer(id);
   }
   broadcastState();
+}
+
+function playerByToken(token) {
+  if (typeof token !== 'string') return null;
+  return Object.keys(state.players).find((id) => state.players[id].token === token) || null;
+}
+
+function attachPlayer(socket, id) {
+  const p = state.players[id];
+  socket.data.playerId = id;
+  socket.join('player:' + id);
+  p.sockets += 1;
+  socket.emit('joined', { id, token: p.token, name: p.name });
+}
+
+// rimuove il giocatore: i suoi telefoni tornano alla pagina del nome e il login salvato non vale più
+function kickPlayer(id) {
+  if (!state.players[id]) return;
+  delete state.players[id];
+  if (activeBeat) activeBeat.required.delete(id);
+  io.to('player:' + id).emit('kicked');
+  for (const s of io.sockets.sockets.values()) {
+    if (s.data.playerId === id) {
+      s.data.playerId = null;
+      s.leave('player:' + id);
+    }
+  }
 }
 
 io.on('connection', (socket) => {
@@ -232,17 +265,44 @@ io.on('connection', (socket) => {
   });
 
   socket.on('player:join', (name) => {
+    if (socket.data.playerId) return;
     const clean = (name || '').toString().trim().slice(0, 24) || 'Avventuriero';
-    state.players[socket.id] = { name: clean, connected: true };
-    socket.data.isPlayer = true;
+    const id = crypto.randomBytes(6).toString('hex');
+    state.players[id] = { name: clean, token: crypto.randomUUID(), sockets: 0, fakeTaps: 0 };
+    attachPlayer(socket, id);
+    broadcastState();
+  });
+
+  // il telefono rientra con il token salvato: se il giocatore esiste ancora riprende da dove era
+  socket.on('player:resume', (token) => {
+    if (socket.data.playerId) return;
+    const id = playerByToken(token);
+    if (!id) {
+      socket.emit('kicked');
+      return;
+    }
+    attachPlayer(socket, id);
     broadcastState();
   });
 
   socket.on('player:tap', () => {
-    if (!activeBeat) return;
-    if (!state.players[socket.id]) return;
-    activeBeat.taps.add(socket.id);
-    io.to('hosts').emit('tapPing', { id: socket.id, name: state.players[socket.id].name, type: activeBeat.type });
+    const id = socket.data.playerId;
+    if (!activeBeat || !id || !state.players[id]) return;
+    activeBeat.taps.add(id);
+    io.to('hosts').emit('tapPing', { id, name: state.players[id].name, type: activeBeat.type });
+  });
+
+  socket.on('host:kick', (id) => {
+    kickPlayer(id);
+    broadcastState();
+  });
+
+  // id di un giocatore: azzera solo il suo contatore; senza id: azzera tutti
+  socket.on('host:resetFakeTaps', (id) => {
+    for (const [pid, p] of Object.entries(state.players)) {
+      if (!id || pid === id) p.fakeTaps = 0;
+    }
+    broadcastState();
   });
 
   socket.on('host:start', (opts) => {
@@ -264,8 +324,9 @@ io.on('connection', (socket) => {
   socket.on('host:hardReset', () => resetGame(true));
 
   socket.on('disconnect', () => {
-    if (state.players[socket.id]) {
-      state.players[socket.id].connected = false;
+    const p = state.players[socket.data.playerId];
+    if (p) {
+      p.sockets = Math.max(0, p.sockets - 1);
       broadcastState();
     }
   });
