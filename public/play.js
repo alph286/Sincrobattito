@@ -14,7 +14,6 @@ let myName = null;
 let phase = 'waiting';
 let cueOpen = false;
 let hasTappedThisCue = false;
-let currentCueType = 'tap';
 
 socket.on('connect', () => connBanner.classList.remove('visible'));
 socket.on('disconnect', () => connBanner.classList.add('visible'));
@@ -43,74 +42,44 @@ function renderDots(progress, target) {
   }
 }
 
+let beatTimeout = null;
+
+// impulso visivo identico per battiti e cue: le indicazioni (ORA/FERMI/esito) le dà la Regia
+function pulse() {
+  core.classList.add('beat');
+  vibrate(20);
+  clearTimeout(beatTimeout);
+  beatTimeout = setTimeout(() => core.classList.remove('beat'), 150);
+}
+
 socket.on('state', (state) => {
   phase = state.phase;
   if (!myName) return;
   renderDots(state.progress, state.target);
 
   if (state.phase === 'waiting') {
-    core.className = 'pulse-core';
     ring.classList.add('idle');
     statusLine.textContent = 'In attesa che la Regia avvii la valvola…';
-  } else if (state.phase === 'running') {
+  } else {
     ring.classList.remove('idle');
-    if (!cueOpen) {
-      core.className = 'pulse-core';
-      statusLine.textContent = 'Senti il battito… preparati.';
-    }
-  } else if (state.phase === 'success') {
-    core.className = 'pulse-core ok';
-    ring.classList.remove('idle');
-    statusLine.textContent = 'La valvola cede!';
+    statusLine.textContent = 'Senti il battito… segui la Regia.';
   }
 });
 
 socket.on('beat', () => {
-  if (phase !== 'running' || cueOpen) return;
-  core.classList.add('beat');
-  vibrate(20);
-  setTimeout(() => core.classList.remove('beat'), 150);
+  if (phase !== 'running') return;
+  pulse();
 });
 
-socket.on('cue', ({ type }) => {
+socket.on('cue', () => {
   cueOpen = true;
   hasTappedThisCue = false;
-  currentCueType = type || 'tap';
-  if (currentCueType === 'skip') {
-    core.className = 'pulse-core skip';
-    core.textContent = 'FERMI';
-    statusLine.textContent = 'Finta — non toccare!';
-    vibrate(15);
-  } else {
-    core.className = 'pulse-core cue';
-    core.textContent = 'ORA';
-    statusLine.textContent = 'Premi adesso, insieme agli altri!';
-    vibrate([0, 60, 40, 60]);
-  }
+  pulse();
 });
 
-socket.on('cueResult', ({ success, progress, target }) => {
+socket.on('cueResult', ({ progress, target }) => {
   cueOpen = false;
   renderDots(progress, target);
-  core.className = 'pulse-core ' + (success ? 'ok' : 'bad');
-  core.textContent = success ? 'BRAVO' : 'FUORI TEMPO';
-  statusLine.textContent = success
-    ? `Ottimo! ${progress}/${target} battiti sincroni.`
-    : 'Qualcuno ha sbagliato tempo — si riparte.';
-  vibrate(success ? [0, 40, 30, 40, 30, 80] : [0, 200]);
-  setTimeout(() => {
-    if (phase === 'running') {
-      core.className = 'pulse-core';
-      core.textContent = '';
-      statusLine.textContent = 'Senti il battito… preparati.';
-    }
-  }, 700);
-});
-
-socket.on('valveOpen', () => {
-  core.className = 'pulse-core ok';
-  core.textContent = '';
-  vibrate([0, 80, 60, 80, 60, 200]);
 });
 
 function handleTap(e) {
@@ -118,8 +87,6 @@ function handleTap(e) {
   if (!cueOpen || hasTappedThisCue) return;
   hasTappedThisCue = true;
   socket.emit('player:tap');
-  core.style.transform = 'scale(0.94)';
-  setTimeout(() => { core.style.transform = ''; }, 100);
 }
 
 core.addEventListener('pointerdown', handleTap);

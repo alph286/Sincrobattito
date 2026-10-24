@@ -181,7 +181,6 @@ input[type="number"] { -moz-appearance: textfield; }
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--text);
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
