@@ -5,9 +5,8 @@ const gameScreen = document.getElementById('gameScreen');
 const joinForm = document.getElementById('joinForm');
 const nameInput = document.getElementById('nameInput');
 const core = document.getElementById('core');
-const ring = document.getElementById('ring');
 const dots = document.getElementById('dots');
-const statusLine = document.getElementById('statusLine');
+const cueLabel = document.getElementById('cueLabel');
 const connBanner = document.getElementById('connBanner');
 
 let myName = null;
@@ -44,41 +43,42 @@ function renderDots(progress, target) {
 
 let beatTimeout = null;
 
-// impulso visivo identico per battiti e cue: le indicazioni (ORA/FERMI/esito) le dà la Regia
-function pulse() {
-  core.classList.add('beat');
-  vibrate(20);
-  clearTimeout(beatTimeout);
-  beatTimeout = setTimeout(() => core.classList.remove('beat'), 150);
+function clearCue() {
+  cueOpen = false;
+  core.className = 'pulse-core';
+  cueLabel.textContent = '';
+  cueLabel.className = 'cue-label';
 }
 
 socket.on('state', (state) => {
   phase = state.phase;
   if (!myName) return;
   renderDots(state.progress, state.target);
-
-  if (state.phase === 'waiting') {
-    ring.classList.add('idle');
-    statusLine.textContent = 'In attesa che la Regia avvii la valvola…';
-  } else {
-    ring.classList.remove('idle');
-    statusLine.textContent = 'Senti il battito… segui la Regia.';
-  }
+  if (state.phase !== 'running') clearCue();
 });
 
+// tutti i cambi sono istantanei: nessuna transizione, così a BPM alti gli stati non si accavallano
 socket.on('beat', () => {
-  if (phase !== 'running') return;
-  pulse();
+  if (phase !== 'running' || cueOpen) return;
+  core.classList.add('beat');
+  vibrate(20);
+  clearTimeout(beatTimeout);
+  beatTimeout = setTimeout(() => core.classList.remove('beat'), 150);
 });
 
-socket.on('cue', () => {
+socket.on('cue', ({ type }) => {
+  clearTimeout(beatTimeout);
   cueOpen = true;
   hasTappedThisCue = false;
-  pulse();
+  const skip = type === 'skip';
+  core.className = 'pulse-core ' + (skip ? 'skip' : 'cue');
+  cueLabel.textContent = skip ? 'FERMI' : 'ORA';
+  cueLabel.className = 'cue-label ' + (skip ? 'skip' : 'cue');
+  vibrate(skip ? 15 : [0, 60, 40, 60]);
 });
 
 socket.on('cueResult', ({ progress, target }) => {
-  cueOpen = false;
+  clearCue();
   renderDots(progress, target);
 });
 

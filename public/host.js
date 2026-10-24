@@ -15,8 +15,14 @@ const inviteBox = document.getElementById('inviteBox');
 const qrImg = document.getElementById('qrImg');
 const joinUrl = document.getElementById('joinUrl');
 const connBanner = document.getElementById('connBanner');
+const levelsRow = document.getElementById('levelsRow');
+const saveLevelBtn = document.getElementById('saveLevelBtn');
 
 let lastState = null;
+let levels = [];
+let selectedLevel = null;
+let saveMode = false;
+let beatTimeout = null;
 
 socket.emit('host:hello');
 
@@ -82,10 +88,12 @@ socket.on('state', (state) => {
 socket.on('beat', () => {
   if (!lastState || lastState.phase !== 'running') return;
   core.classList.add('beat');
-  setTimeout(() => core.classList.remove('beat'), 150);
+  clearTimeout(beatTimeout);
+  beatTimeout = setTimeout(() => core.classList.remove('beat'), 150);
 });
 
 socket.on('cue', ({ type }) => {
+  clearTimeout(beatTimeout);
   if (type === 'skip') {
     core.textContent = 'FERMI!';
     core.className = 'pulse-core skip';
@@ -116,12 +124,6 @@ socket.on('cueResult', ({ type, success, missing, progress, target }) => {
   } else {
     statusLine.textContent = 'Fuori tempo. Si ricomincia.';
   }
-  setTimeout(() => {
-    if (lastState && lastState.phase === 'running') {
-      core.textContent = '';
-      core.className = 'pulse-core';
-    }
-  }, 700);
 });
 
 socket.on('valveOpen', () => {
@@ -129,13 +131,62 @@ socket.on('valveOpen', () => {
   core.className = 'pulse-core ok';
 });
 
-startBtn.addEventListener('click', () => {
-  socket.emit('host:start', {
+function currentValues() {
+  return {
     bpm: Number(bpmInput.value) || 66,
     target: Number(targetInput.value) || 8,
     windowMs: Number(windowInput.value) || 600,
     skipChance: Number(skipChanceInput.value) || 0,
+  };
+}
+
+// ---------- livelli: un tocco carica i valori nei campi, "Salva nel livello…" poi un tocco li salva ----------
+function renderLevels() {
+  levelsRow.innerHTML = '';
+  levelsRow.classList.toggle('saving', saveMode);
+  levels.forEach((lv, i) => {
+    const b = document.createElement('button');
+    b.className = 'level-btn' + (i === selectedLevel ? ' selected' : '');
+    b.disabled = !lv && !saveMode;
+    b.innerHTML = `<span>Livello ${i + 1}</span><small>${
+      lv ? `${lv.bpm} bpm · ${lv.target} · ${lv.windowMs} ms · ${lv.skipChance}%` : 'vuoto'
+    }</small>`;
+    b.addEventListener('click', () => onLevelClick(i));
+    levelsRow.appendChild(b);
   });
+  saveLevelBtn.textContent = saveMode ? 'Annulla salvataggio' : 'Salva nel livello…';
+}
+
+function onLevelClick(i) {
+  if (saveMode) {
+    socket.emit('host:saveLevel', { slot: i, values: currentValues() });
+    saveMode = false;
+    selectedLevel = i;
+    renderLevels();
+    return;
+  }
+  const lv = levels[i];
+  if (!lv) return;
+  bpmInput.value = lv.bpm;
+  targetInput.value = lv.target;
+  windowInput.value = lv.windowMs;
+  skipChanceInput.value = lv.skipChance;
+  selectedLevel = i;
+  renderLevels();
+}
+
+socket.on('levels', (list) => {
+  levels = list;
+  renderLevels();
+});
+
+saveLevelBtn.addEventListener('click', () => {
+  saveMode = !saveMode;
+  renderLevels();
+});
+
+startBtn.addEventListener('click', () => {
+  socket.emit('host:start', currentValues());
 });
 
 resetBtn.addEventListener('click', () => {

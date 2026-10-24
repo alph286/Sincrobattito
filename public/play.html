@@ -17,25 +17,20 @@
 <div class="conn-banner" id="connBanner">Connessione persa — riconnessione…</div>
 
 <div class="screen" id="joinScreen">
-  <div class="brand">
-    <h1>Sincrobattito</h1>
-    <p class="subtitle">Senti il battito, premi in sincronia.</p>
-  </div>
   <form class="name-form" id="joinForm">
-    <input type="text" id="nameInput" placeholder="Inserisci il tuo nome" maxlength="24" autocomplete="off" required />
+    <input type="text" id="nameInput" placeholder="Nome" maxlength="24" autocomplete="off" required />
     <button type="submit">Accedi</button>
   </form>
 </div>
 
 <div class="screen" id="gameScreen" style="display:none;">
+  <div class="cue-label" id="cueLabel"></div>
   <div class="progress-dots" id="dots"></div>
 
   <div class="pulse-wrap">
     <div class="pulse-ring" id="ring"></div>
     <div class="pulse-core" id="core"></div>
   </div>
-
-  <div class="status-line" id="statusLine">In attesa che la Regia avvii la valvola…</div>
 </div>
 
 <script src="/bg-shader.js"></script>

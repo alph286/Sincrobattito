@@ -29,15 +29,6 @@ html, body {
 
 a { color: inherit; }
 
-@media (prefers-reduced-motion: no-preference) {
-  .screen { animation: screen-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-}
-
-@keyframes screen-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .screen {
   position: relative;
   z-index: 1;
@@ -102,7 +93,6 @@ button {
   color: white;
   font-weight: 600;
   letter-spacing: 0.5px;
-  transition: transform 0.1s ease, background 0.2s ease;
   touch-action: manipulation;
 }
 button:active { transform: scale(0.96); }
@@ -156,17 +146,6 @@ input[type="number"] { -moz-appearance: textfield; }
   opacity: 0.5;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .pulse-ring.idle {
-    animation: ring-breathe 4.2s ease-in-out infinite;
-  }
-}
-
-@keyframes ring-breathe {
-  0%, 100% { transform: scale(1); opacity: 0.4; }
-  50% { transform: scale(1.04); opacity: 0.7; }
-}
-
 .pulse-core {
   width: 70%;
   height: 70%;
@@ -216,6 +195,21 @@ input[type="number"] { -moz-appearance: textfield; }
   box-shadow: 0 0 60px rgba(224,70,79,0.6);
 }
 
+/* ORA / FERMI in alto, lontano dal cerchio da premere; spazio sempre riservato per non spostare il layout */
+.cue-label {
+  position: absolute;
+  top: max(28px, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  min-height: 1.2em;
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 4px;
+  line-height: 1.2;
+}
+.cue-label.cue { color: #ffe9a8; text-shadow: 0 0 24px rgba(255,77,85,0.8); }
+.cue-label.skip { color: #e3c8ff; text-shadow: 0 0 24px rgba(123,79,176,0.9); }
+
 .status-line {
   margin-top: 18px;
   min-height: 1.4em;
@@ -235,7 +229,6 @@ input[type="number"] { -moz-appearance: textfield; }
   border-radius: 50%;
   background: #33363f;
   border: 1px solid var(--flesh-light);
-  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 .progress-dots .dot.filled {
   background: var(--ok);
@@ -307,6 +300,41 @@ input[type="number"] { -moz-appearance: textfield; }
   width: 110px;
 }
 
+/* regia: i quattro valori sulla stessa riga, etichette in alto e input allineati in basso */
+#setupControls { flex-wrap: nowrap; }
+#setupControls .field {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 140px;
+  justify-content: space-between;
+}
+
+.levels-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 640px;
+  margin: 18px auto 0;
+}
+.level-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: #1c1e26;
+  border: 1px solid #33363f;
+  font-size: 0.9rem;
+}
+.level-btn small {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.level-btn.selected { border-color: var(--accent-glow); background: var(--flesh); }
+.levels-row.saving .level-btn { border-style: dashed; border-color: var(--accent-glow); }
+
 .field input {
   font-size: 1.1rem;
   padding: 12px 10px;
@@ -353,22 +381,10 @@ input[type="number"] { -moz-appearance: textfield; }
   width: min(90vw, 320px);
 }
 
-.brand {
-  margin-bottom: 28px;
-}
-
-.brand h1 {
-  font-size: 1.3rem;
-}
-
-.brand .subtitle {
-  margin-bottom: 0;
-}
-
 /* ---------- connection banner: fixed pill, safe-area aware, non-blocking ---------- */
 .conn-banner {
   position: fixed;
-  top: -80px;
+  top: max(10px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
@@ -380,15 +396,11 @@ input[type="number"] { -moz-appearance: textfield; }
   background: var(--bad);
   color: #2a0508;
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  opacity: 0;
-  transition: top 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  display: none;
   pointer-events: none;
 }
 
-.conn-banner.visible {
-  top: max(10px, env(safe-area-inset-top));
-  opacity: 1;
-}
+.conn-banner.visible { display: block; }
 
 /* ---------- invite box: QR + link to onboard players' phones ---------- */
 .invite-box {

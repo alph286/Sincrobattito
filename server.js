@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
@@ -58,6 +59,32 @@ let state = {
   windowMs: DEFAULTS.windowMs,
   skipChance: DEFAULTS.skipChance,
 };
+
+// ---------- Livelli preimpostati (salvati dalla regia, persistono su file) ----------
+const LEVEL_SLOTS = 5;
+const LEVELS_FILE = path.join(__dirname, 'levels.json');
+
+function cleanLevel(v) {
+  if (!v || typeof v !== 'object') return null;
+  return {
+    bpm: Math.min(120, Math.max(30, Number(v.bpm) || DEFAULTS.bpm)),
+    target: Math.min(20, Math.max(1, Number(v.target) || DEFAULTS.target)),
+    windowMs: Math.min(2000, Math.max(300, Number(v.windowMs) || DEFAULTS.windowMs)),
+    skipChance: Math.min(60, Math.max(0, Number(v.skipChance) || 0)), // in percentuale, come nei campi della regia
+  };
+}
+
+function loadLevels() {
+  const empty = Array(LEVEL_SLOTS).fill(null);
+  try {
+    const saved = JSON.parse(fs.readFileSync(LEVELS_FILE, 'utf8'));
+    return empty.map((_, i) => cleanLevel(Array.isArray(saved) ? saved[i] : null));
+  } catch (e) {
+    return empty;
+  }
+}
+
+let levels = loadLevels();
 
 let beatTimer = null;
 let resolveTimer = null;
@@ -189,6 +216,19 @@ io.on('connection', (socket) => {
   socket.on('host:hello', () => {
     socket.join('hosts');
     socket.emit('state', publicState());
+    socket.emit('levels', levels);
+  });
+
+  socket.on('host:saveLevel', ({ slot, values } = {}) => {
+    const i = Number(slot);
+    if (!Number.isInteger(i) || i < 0 || i >= LEVEL_SLOTS) return;
+    levels[i] = cleanLevel(values);
+    try {
+      fs.writeFileSync(LEVELS_FILE, JSON.stringify(levels, null, 2));
+    } catch (e) {
+      console.warn('Impossibile salvare i livelli:', e.message);
+    }
+    io.to('hosts').emit('levels', levels);
   });
 
   socket.on('player:join', (name) => {

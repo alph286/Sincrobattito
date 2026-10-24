@@ -32,6 +32,8 @@
 
       <div class="status-line" id="statusLine">Fai entrare i giocatori, poi premi Avvia.</div>
 
+      <div class="levels-row" id="levelsRow"></div>
+
       <div class="controls-row" id="setupControls">
         <div class="field">BPM
           <input type="number" inputmode="numeric" pattern="[0-9]*" id="bpm" value="66" min="30" max="120" />
@@ -45,6 +47,10 @@
         <div class="field">Finte (%)
           <input type="number" inputmode="numeric" pattern="[0-9]*" id="skipChance" value="20" min="0" max="60" step="5" />
         </div>
+      </div>
+
+      <div class="controls-row">
+        <button id="saveLevelBtn" class="secondary">Salva nel livello…</button>
       </div>
 
       <div class="controls-row">
