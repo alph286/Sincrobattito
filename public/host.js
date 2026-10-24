@@ -1,10 +1,11 @@
 const socket = io();
 
 const core = document.getElementById('core');
-const ring = document.getElementById('ring');
 const playerList = document.getElementById('playerList');
 const dots = document.getElementById('dots');
+const openSessionBtn = document.getElementById('openSessionBtn');
 const startBtn = document.getElementById('startBtn');
+const closeSessionBtn = document.getElementById('closeSessionBtn');
 const resetBtn = document.getElementById('resetBtn');
 const hardResetBtn = document.getElementById('hardResetBtn');
 const resetFakesBtn = document.getElementById('resetFakesBtn');
@@ -13,7 +14,6 @@ const targetInput = document.getElementById('target');
 const windowInput = document.getElementById('windowMs');
 const skipChanceInput = document.getElementById('skipChance');
 const inviteBox = document.getElementById('inviteBox');
-const qrImg = document.getElementById('qrImg');
 const joinUrl = document.getElementById('joinUrl');
 const connBanner = document.getElementById('connBanner');
 const levelsRow = document.getElementById('levelsRow');
@@ -36,10 +36,8 @@ socket.on('connect', () => {
 
 fetch('/api/join-info')
   .then((r) => r.json())
-  .then(({ url, qr }) => {
+  .then(({ url }) => {
     joinUrl.textContent = url;
-    if (qr) qrImg.src = qr;
-    else inviteBox.style.display = 'none';
   })
   .catch(() => { inviteBox.style.display = 'none'; });
 
@@ -74,23 +72,23 @@ socket.on('state', (state) => {
   renderDots(state.progress, state.target);
   renderPlayers(state.players);
 
-  if (state.phase === 'waiting') {
+  const phase = state.phase;
+  if (phase === 'waiting') {
+    core.textContent = 'SPENTA';
+    core.className = 'pulse-core';
+  } else if (phase === 'session') {
     core.textContent = 'IN ATTESA';
     core.className = 'pulse-core';
-    ring.classList.add('idle');
-    inviteBox.style.display = '';
-    startBtn.disabled = false;
-  } else if (state.phase === 'running') {
-    ring.classList.remove('idle');
-    inviteBox.style.display = 'none';
-    startBtn.disabled = true;
-  } else if (state.phase === 'success') {
-    core.textContent = 'APERTA';
+  } else if (phase === 'success') {
+    core.textContent = 'SUPERATO';
     core.className = 'pulse-core ok';
-    ring.classList.remove('idle');
-    inviteBox.style.display = 'none';
-    startBtn.disabled = true;
   }
+
+  // ogni pulsante è attivo solo quando ha senso nella fase corrente
+  openSessionBtn.disabled = phase !== 'waiting';
+  startBtn.disabled = phase !== 'session' && phase !== 'success';
+  closeSessionBtn.disabled = phase === 'waiting';
+  resetBtn.disabled = phase !== 'running' && phase !== 'success';
 });
 
 socket.on('beat', () => {
@@ -122,7 +120,7 @@ socket.on('cueResult', ({ type, success, progress, target }) => {
 });
 
 socket.on('valveOpen', () => {
-  core.textContent = 'APERTA';
+  core.textContent = 'SUPERATO';
   core.className = 'pulse-core ok';
 });
 
@@ -180,6 +178,14 @@ saveLevelBtn.addEventListener('click', () => {
   renderLevels();
 });
 
+openSessionBtn.addEventListener('click', () => {
+  socket.emit('host:openSession');
+});
+
+closeSessionBtn.addEventListener('click', () => {
+  socket.emit('host:closeSession');
+});
+
 startBtn.addEventListener('click', () => {
   socket.emit('host:start', currentValues());
 });
@@ -193,7 +199,7 @@ resetFakesBtn.addEventListener('click', () => {
 });
 
 hardResetBtn.addEventListener('click', () => {
-  if (confirm('Rimuovere anche tutti i giocatori collegati?')) {
+  if (confirm('Chiudere il gioco ed espellere tutti i giocatori?')) {
     socket.emit('host:hardReset');
   }
 });

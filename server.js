@@ -52,7 +52,7 @@ const DEFAULTS = {
 };
 
 let state = {
-  phase: 'waiting',    // waiting | running | success
+  phase: 'waiting',    // waiting (valvola disattivata) | session (sessione aperta, fermo) | running (livello in corso) | success (livello superato, fermo)
   players: {},          // id pubblico -> { name, token, sockets, fakeTaps }
   progress: 0,
   target: DEFAULTS.target,
@@ -206,10 +206,11 @@ function resolveBeat(id) {
   broadcastState();
 }
 
-function resetGame(hard) {
+// toPhase: 'session' interrompe solo il livello, 'waiting' chiude la sessione
+function resetGame(hard, toPhase = 'waiting') {
   stopBeatLoop();
   state.progress = 0;
-  state.phase = 'waiting';
+  state.phase = state.phase === 'waiting' ? 'waiting' : toPhase;
   if (hard) {
     for (const id of Object.keys(state.players)) kickPlayer(id);
   }
@@ -305,7 +306,15 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
+  socket.on('host:openSession', () => {
+    if (state.phase !== 'waiting') return;
+    state.phase = 'session';
+    broadcastState();
+  });
+
+  // "Inizia livello": parte solo a sessione aperta e livello fermo
   socket.on('host:start', (opts) => {
+    if (state.phase !== 'session' && state.phase !== 'success') return;
     if (opts && typeof opts === 'object') {
       if (opts.bpm) state.bpm = Math.min(120, Math.max(30, Number(opts.bpm) || state.bpm));
       if (opts.target) state.target = Math.min(20, Math.max(1, Number(opts.target) || state.target));
@@ -320,7 +329,8 @@ io.on('connection', (socket) => {
     startBeatLoop();
   });
 
-  socket.on('host:reset', () => resetGame(false));
+  socket.on('host:reset', () => resetGame(false, 'session'));
+  socket.on('host:closeSession', () => resetGame(false, 'waiting'));
   socket.on('host:hardReset', () => resetGame(true));
 
   socket.on('disconnect', () => {

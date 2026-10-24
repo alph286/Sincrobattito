@@ -267,6 +267,13 @@ input[type="number"] { -moz-appearance: textfield; }
   font-weight: 700;
   color: #c9a6ff;
 }
+button.mini-wide {
+  display: block;
+  margin: 0 auto;
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+}
 .player-list button.mini {
   min-height: 32px;
   padding: 4px 10px;

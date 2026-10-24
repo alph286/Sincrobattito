@@ -18,8 +18,6 @@
   <div class="host-grid">
     <div class="host-col-game">
       <div class="invite-box" id="inviteBox">
-        <span class="invite-label">I giocatori si uniscono scansionando</span>
-        <div class="qr-box"><img id="qrImg" alt="QR per unirsi" width="140" height="140" /></div>
         <span class="join-url" id="joinUrl"></span>
       </div>
 
@@ -27,10 +25,11 @@
 
       <div class="pulse-wrap">
         <div class="pulse-ring" id="ring"></div>
-        <div class="pulse-core" id="core">IN ATTESA</div>
+        <div class="pulse-core" id="core">SPENTA</div>
       </div>
 
       <ul class="player-list" id="playerList"></ul>
+      <button id="resetFakesBtn" class="secondary mini-wide">Azzera tutti i contatori finte</button>
 
       <div class="levels-row" id="levelsRow"></div>
 
@@ -54,10 +53,11 @@
       </div>
 
       <div class="controls-row">
-        <button id="startBtn">Avvia la valvola</button>
+        <button id="openSessionBtn">Avvia la valvola</button>
+        <button id="startBtn">Inizia livello</button>
+        <button id="closeSessionBtn" class="secondary">Disattiva la valvola</button>
         <button id="resetBtn" class="secondary">Reset tentativo</button>
-        <button id="resetFakesBtn" class="secondary">Azzera tutti i contatori finte</button>
-        <button id="hardResetBtn" class="ghost">Reset totale (rimuove giocatori)</button>
+        <button id="hardResetBtn" class="ghost">Chiudi gioco (espelle tutti)</button>
       </div>
     </div>
   </div>
