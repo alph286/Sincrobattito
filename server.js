@@ -32,9 +32,14 @@ function getLocalIp() {
   return 'localhost';
 }
 
+// Gli scanner QR (Google Lens & co.) spesso non riconoscono come link un URL con IP nudo:
+// usiamo il nome mDNS della macchina (es. raspyserver.local). JOIN_HOST permette di forzarlo a mano.
+function getJoinHost() {
+  return process.env.JOIN_HOST || `${os.hostname()}.local`;
+}
+
 app.get('/api/join-info', async (req, res) => {
-  const ip = getLocalIp();
-  const url = `http://${ip}:${PORT}/play`;
+  const url = `http://${getJoinHost()}:${PORT}/play`;
   try {
     const qr = await QRCode.toDataURL(url, { margin: 1, width: Math.min(Number(req.query.w) || 320, 1200) });
     res.json({ url, qr });
@@ -346,5 +351,5 @@ server.listen(PORT, '0.0.0.0', () => {
   const ip = getLocalIp();
   console.log(`Sincrobattito in ascolto su:`);
   console.log(`  Regia (host):    http://${ip}:${PORT}/host`);
-  console.log(`  Giocatori:       http://${ip}:${PORT}/play`);
+  console.log(`  Giocatori:       http://${getJoinHost()}:${PORT}/play`);
 });
