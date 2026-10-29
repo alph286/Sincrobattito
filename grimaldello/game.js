@@ -14,6 +14,9 @@
   const canvas = $('lock');
   const ctx = canvas.getContext('2d');
   const statusEl = $('status');
+  const hintEl = $('statusHint');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const PICK_SVG = '<svg viewBox="0 0 16 22" aria-hidden="true"><rect x="5.5" y="14" width="5" height="7" rx="1.5" /><path d="M8 14V4.5l2.5-2.5" /></svg>';
   const hudTitle = $('hudTitle');
   const picksEl = $('picks');
 
@@ -86,6 +89,11 @@
     };
     spawnTarget();
     renderPicks();
+    describeLock();
+  }
+
+  function describeLock() {
+    canvas.setAttribute('aria-label', g.remaining === 1 ? 'Serratura, 1 perno rimasto' : 'Serratura, ' + g.remaining + ' perni rimasti');
   }
 
   function spawnTarget() {
@@ -117,18 +125,20 @@
     g = null;
   }
 
-  function setStatus(text, cls) {
+  function setStatus(text, cls, hint) {
     statusEl.textContent = text;
     statusEl.className = 'status' + (cls ? ' ' + cls : '');
+    hintEl.textContent = hint || '';
   }
 
   function renderPicks() {
-    if (!cfg.picks) { picksEl.innerHTML = ''; return; }
+    if (!cfg.picks) { picksEl.innerHTML = ''; picksEl.removeAttribute('aria-label'); return; }
     let html = '';
     for (let i = 0; i < cfg.picks; i++) {
-      html += '<span class="' + (i < g.picksLeft ? '' : 'broken') + '">⟋</span>';
+      html += '<span class="' + (i < g.picksLeft ? '' : 'broken') + '">' + PICK_SVG + '</span>';
     }
     picksEl.innerHTML = html;
+    picksEl.setAttribute('aria-label', g.picksLeft + (g.picksLeft === 1 ? ' grimaldello' : ' grimaldelli') + ' su ' + cfg.picks);
   }
 
   // ---------- input ----------
@@ -151,8 +161,7 @@
         if (g.t > 0.6) { newAttempt(false); setStatus('Tocca per iniziare'); }
         return;
       case 'fail':
-        if (g.t > 0.5) { newAttempt(true); setStatus('Tocca per riprovare'); }
-        return;
+        return;   // torna da solo a 'ready' dopo il colpo (vedi frame)
     }
   }
 
@@ -169,6 +178,7 @@
 
   function hit() {
     g.remaining--;
+    describeLock();
     g.hitPulse = 1;
     audio.click();
     vibrate(15);
@@ -189,7 +199,7 @@
       renderPicks();
       if (g.picksLeft <= 0) {
         g.phase = 'over';
-        setStatus('L’ultimo grimaldello si è spezzato', 'bad');
+        setStatus('L’ultimo grimaldello si è spezzato', 'bad', 'La serratura resiste. Tocca per ricominciare da capo.');
         return;
       }
       setStatus(msg + ' Il grimaldello si spezza.', 'bad');
@@ -207,9 +217,9 @@
     if (cfg.mode === 'levels') {
       campaignLevel = Math.max(campaignLevel, cfg.level + 1);
       saveLevel(campaignLevel);
-      setStatus('Aperta! Tocca per il livello successivo', 'good');
+      setStatus('Aperta!', 'good', 'Tocca per il livello ' + campaignLevel);
     } else {
-      setStatus('La serratura cede.', 'good');
+      setStatus('La serratura cede.', 'good', 'Tocca per richiuderla e riprovare');
     }
   }
 
@@ -286,7 +296,7 @@
     const R = Rb * 0.72;            // raggio della scanalatura
     const groove = Rb * 0.16;       // spessore della scanalatura
 
-    const sx = g.shake > 0 ? Math.sin(g.t * 70) * 10 * g.shake : 0;
+    const sx = g.shake > 0 && !reduceMotion.matches ? Math.sin(g.t * 70) * 10 * g.shake : 0;
     ctx.save();
     ctx.translate(cx + sx, cy);
 
@@ -315,10 +325,14 @@
 
     ctx.restore();
 
-    // lampo rosso / verde su tutto
+    // lampo rosso / verde attorno alla serratura, sfumato verso i bordi del canvas
     if (g.flash) {
-      const a = Math.abs(g.flash) * 0.35;
-      ctx.fillStyle = g.flash > 0 ? `rgba(179,35,43,${a})` : `rgba(111,191,115,${a * 0.6})`;
+      const a = Math.abs(g.flash) * 0.4;
+      const rgb = g.flash > 0 ? '179,35,43' : '111,191,115';
+      const glow = ctx.createRadialGradient(cx, cy - Rb * 0.4, Rb * 0.3, cx, cy - Rb * 0.4, Math.min(W, H) * 0.62);
+      glow.addColorStop(0, `rgba(${rgb},${g.flash > 0 ? a : a * 0.6})`);
+      glow.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.fillStyle = glow;
       ctx.fillRect(0, 0, W, H);
     }
   }
@@ -416,9 +430,23 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const scale = 1 + g.hitPulse * 0.15;
-    ctx.font = `${Math.round(Rb * 0.42 * scale)}px Georgia, serif`;
-    ctx.fillStyle = g.phase === 'open' ? '#6fbf73' : '#f1e6d8';
-    ctx.fillText(g.phase === 'open' ? '✓' : String(g.remaining), 0, Rb * 0.02);
+    if (g.phase === 'open') {
+      // segno di spunta disegnato, non un glifo del font
+      const k = Rb * 0.16;
+      ctx.strokeStyle = '#6fbf73';
+      ctx.lineWidth = Rb * 0.05;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-k, 0);
+      ctx.lineTo(-k * 0.3, k * 0.7);
+      ctx.lineTo(k, -k * 0.65);
+      ctx.stroke();
+    } else {
+      ctx.font = `${Math.round(Rb * 0.4 * scale)}px 'Grimaldello Cifre', 'IM Fell English', Georgia, serif`;
+      ctx.fillStyle = '#f1e6d8';
+      ctx.fillText(String(g.remaining), 0, Rb * 0.04);
+    }
     ctx.restore();
   }
 
@@ -446,6 +474,11 @@
         g.angle += g.dir * step;
         g.travelled += step;
         if (g.travelled > g.gap + hitWindow()) fail('Superata!');
+      }
+      if (g.phase === 'fail' && g.t > 0.9) {
+        const msg = statusEl.textContent;
+        newAttempt(true);
+        setStatus(msg, 'bad', 'Tocca per riprovare');
       }
       if (g.phase === 'open') g.shackle = Math.min(1, g.shackle + dt * 2.5);
       g.shake = Math.max(0, g.shake - dt * 2.5);

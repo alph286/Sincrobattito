@@ -81,3 +81,7 @@ oppure, col server avviato, da `http://<ip>:3001/grimaldello/`.
   direttamente quella serratura sul telefono del giocatore. Apri la regia
   dall'indirizzo di rete (non da `localhost`), così il link copiato funziona
   anche sugli altri dispositivi.
+
+I font (IM Fell English per il testo, Cinzel per le cifre) sono inclusi in
+`grimaldello/fonts/` con licenza SIL OFL, così il gioco funziona anche senza
+internet.
