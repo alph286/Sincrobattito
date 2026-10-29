@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0a0c" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="color-scheme" content="dark" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M10 14V10a6 6 0 0 1 12 0v4' fill='none' stroke='%23a88a5a' stroke-width='3'/%3E%3Ccircle cx='16' cy='21' r='10' fill='%232a1e18'/%3E%3Ccircle cx='16' cy='21' r='7' fill='none' stroke='%23d9a441' stroke-width='2'/%3E%3C/svg%3E" />
+<title>Grimaldello — Anime Salve</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Menu -->
+<section class="screen" id="menuScreen">
+  <div class="menu">
+    <p class="kicker">Anime Salve</p>
+    <h1>Grimaldello</h1>
+    <p class="lead">Tocca quando il grimaldello passa sulla runa. Ogni perno inverte il verso. Se lo manchi, la serratura si richiude.</p>
+
+    <button class="btn primary" id="btnLevels">Scassina <span id="levelLabel">· livello 1</span></button>
+
+    <details class="dm" id="dmPanel">
+      <summary>Serratura del DM</summary>
+      <div class="dm-grid">
+        <label>Perni
+          <input type="number" id="cfgPins" min="1" max="30" value="5" inputmode="numeric" />
+        </label>
+        <label>Velocità
+          <select id="cfgSpeed">
+            <option value="1">1 · rozza</option>
+            <option value="2">2 · comune</option>
+            <option value="3" selected>3 · buona</option>
+            <option value="4">4 · nanica</option>
+            <option value="5">5 · arcana</option>
+          </select>
+        </label>
+        <label>Grimaldelli
+          <input type="number" id="cfgPicks" min="0" max="20" value="3" inputmode="numeric" />
+          <small>0 = infiniti</small>
+        </label>
+        <label>Bonus scassinare
+          <input type="number" id="cfgBonus" min="-5" max="15" value="0" inputmode="numeric" />
+          <small>allarga la runa</small>
+        </label>
+      </div>
+      <div class="dm-actions">
+        <button class="btn" id="btnCustom">Prova la serratura</button>
+        <button class="btn ghost" id="btnCopy">Copia link per il giocatore</button>
+      </div>
+      <p class="hint" id="copyHint"></p>
+    </details>
+  </div>
+</section>
+
+<!-- Gioco -->
+<section class="screen game" id="gameScreen" hidden>
+  <header class="hud">
+    <button class="icon-btn" id="btnBack" aria-label="Torna al menu">‹</button>
+    <div class="hud-title" id="hudTitle">Livello 1</div>
+    <div class="picks" id="picks" aria-label="Grimaldelli rimasti"></div>
+  </header>
+
+  <canvas id="lock" aria-label="Serratura"></canvas>
+
+  <p class="status" id="status">Tocca per iniziare</p>
+</section>
+
+<script src="game.js"></script>
+</body>
+</html>
