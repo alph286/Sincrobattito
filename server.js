@@ -20,6 +20,9 @@ app.get('/host', (req, res) => res.sendFile(path.join(__dirname, 'public', 'host
 app.get('/play', (req, res) => res.sendFile(path.join(__dirname, 'public', 'play.html')));
 app.get('/qr', (req, res) => res.sendFile(path.join(__dirname, 'public', 'qr.html')));
 
+// Webapp separata: minigioco dello scasso (statica, funziona anche aprendo grimaldello/index.html da sola)
+app.use('/grimaldello', express.static(path.join(__dirname, 'grimaldello')));
+
 function getLocalIp() {
   const ifaces = os.networkInterfaces();
   for (const name of Object.keys(ifaces)) {

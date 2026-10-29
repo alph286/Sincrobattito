@@ -58,3 +58,26 @@ Nei controlli della regia puoi regolare prima di avviare:
 Il DM può anche premere **Reset tentativo** in qualsiasi momento per azzerare il
 progresso senza far uscire i giocatori, o **Reset totale** per svuotare anche la
 lista dei giocatori connessi (es. a fine sessione).
+
+---
+
+# Grimaldello — minigioco dello scasso
+
+Webapp separata nella cartella `grimaldello/` (clone di *Pick a Lock* per
+Anime Salve): un grimaldello gira attorno alla serratura e bisogna toccare lo
+schermo (o premere Spazio) quando passa sulla runa dorata. Ogni perno preso
+inverte il verso; se il grimaldello supera la runa o si tocca a vuoto, il
+tentativo ricomincia.
+
+È tutta statica, senza dipendenze: si apre anche da sola (`grimaldello/index.html`)
+oppure, col server avviato, da `http://<ip>:3001/grimaldello/`.
+
+- **Scassina**: livelli in sequenza (livello N = N perni, sempre più veloce).
+  Il livello raggiunto resta salvato nel browser.
+- **Serratura del DM**: imposti perni, velocità (1–5), grimaldelli disponibili
+  (ogni errore ne spezza uno, 0 = infiniti) e bonus di scassinare (allarga la
+  runa). *Copia link per il giocatore* genera un indirizzo tipo
+  `/grimaldello/?perni=6&velocita=3&grimaldelli=2&bonus=4` che apre
+  direttamente quella serratura sul telefono del giocatore. Apri la regia
+  dall'indirizzo di rete (non da `localhost`), così il link copiato funziona
+  anche sugli altri dispositivi.
